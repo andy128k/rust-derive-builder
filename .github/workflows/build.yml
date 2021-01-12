@@ -1,0 +1,53 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - nightly
+          - beta
+          - stable
+          - 1.40.0
+        features:
+          - ""
+          - --features skeptic_tests
+          - --no-default-features
+          - --no-default-features --features skeptic_tests
+          - --features clippy
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: core crate
+        run: |
+          cd derive_builder_core
+          cargo build --all ${{ matrix.features }} --verbose
+          cargo test --all --no-fail-fast ${{ matrix.features }} --verbose -- --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: macro crate
+        run: |
+          cd derive_builder_macro
+          cargo build --all ${{ matrix.features }} --verbose
+          cargo test --all --no-fail-fast ${{ matrix.features }} --verbose -- --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: main crate
+        run: |
+          cd derive_builder
+          cargo build --all ${{ matrix.features }} --verbose
+          cargo test --all --no-fail-fast ${{ matrix.features }} --verbose -- --nocapture
+        env:
+          RUST_BACKTRACE: 1
